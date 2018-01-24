@@ -21,9 +21,16 @@ import msvcrt
 img_width, img_height = 250, 140
 
 class_number=6
-class_dict={0:'down',1:'front',2:'left',3:'right',4:'stop',5:'up'}
+if class_number == 6:
+    class_dict={0:'down',1:'front',2:'left',3:'right',4:'stop',5:'up'}
+    weight_file_name='drone_control_6class_drone_capture_image_5C1F_V2.h5'
+elif class_number == 4:
+    class_dict={0:'front',1:'left',2:'right',3:'stop'}
+    weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class.h5'
+elif class_number == 3:
+    class_dict={0:'front',1:'left',2:'right'}
+    weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_3class.h5'
 
-weight_file_name='drone_control_6class_drone_capture_image_5C1F_V2.h5'
 
 if K.image_data_format() == 'channels_first':
     input_shape = (3, img_width, img_height)
@@ -204,6 +211,7 @@ size = [1000, 600]
 BLACK    = (   0,   0,   0)
 WHITE    = ( 255, 255, 255)
 
+camera_num = 0
 
 
 if __name__ == "__main__":
@@ -234,6 +242,8 @@ if __name__ == "__main__":
             textPrint.reset()
             textPrint.print(screen, "Ready to Fly {}".format(" ") )
             textPrint.print(screen, "press X button to start {}".format(" ") )
+            textPrint.print(screen, "press Share button to quit {}".format(" ") )
+            textPrint.print(screen, "Camera Number : {}".format(camera_num))
 
             controller.update()
 
@@ -244,8 +254,12 @@ if __name__ == "__main__":
                 idle=False
                 #Loop until the user clicks the close button.
                 done = False
+            elif controller.B:
+                camera_num = camera_num * (-1) + 1 
 
-            time.sleep(1)
+            pygame.display.flip()
+
+            clock.tick(2)
 
         
         roll=1500
@@ -271,8 +285,9 @@ if __name__ == "__main__":
         
         prestate='None'
         prestate2 = 'None'
+        frontcontrol = 1
         
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(camera_num)
         
         try:
             # -------- Main Program Loop -----------
@@ -391,124 +406,109 @@ if __name__ == "__main__":
                         rotate_offset = rotate_offset + 5
                 else:
                     if auto_pilot:
-                        if abs(controller.a_joystick_left_x)<0.1 and abs(controller.a_joystick_left_y)<0.1 and abs(controller.a_joystick_right_x)<0.1 and abs(controller.a_joystick_right_y)<0.1:
+                        if abs(controller.a_joystick_right_x)<0.1 and abs(controller.a_joystick_right_y)<0.1 and abs(controller.a_trigger)<0.1:
                             #auto_pilot controll method
                             pitch=1500+pitch_offset
                             roll=1500+roll_offset
                             rotate=1500+rotate_offset
+                            if(frontcontrol == 1):
+                                pitch = 1560+pitch_offset
+                                frontcontrol = -frontcontrol
+
                             if(top1 == 'front'):
                                 pitch = 1600+pitch_offset
                                 prestate = 'front'
-                                '''if(prestate == 'front2'):
-                                    pitch = 1600+pitch_offset
-                                    prestate = 'front3'
-                                elif(prestate == 'front3'):
-                                    pitch = 1500+pitch_offset
-                                    prestate == 'front' 
-                                else:
-                                    pitch = 1600+pitch_offset
-                                    prestate = 'front2'''
+                                # if(prestate == 'front2'):
+                                #     pitch = 1600+pitch_offset
+                                #     prestate = 'front3'
+                                # elif(prestate == 'front3'):
+                                #     pitch = 1500+pitch_offset
+                                #     prestate == 'front' 
+                                # else:
+                                #     pitch = 1600+pitch_offset
+                                #     prestate = 'front2'
                             elif(top1 == 'stop'):
                                 if(prestate == 'stop2'):
-                                    pitch = 1450+pitch_offset
+                                    pitch = 1500+pitch_offset
                                     prestate = 'stop3'
                                 elif(prestate == 'stop3'):
                                     pitch = 1500+pitch_offset
                                     prestate = 'stop'
                                 else:
-                                    pitch = 1450+pitch_offset
+                                    pitch = 1500+pitch_offset
                                     prestate = 'stop2'
-                            elif(top1 == 'up'):
-                                if(throttle < 1780):
-                                    throttle = throttle + 5
-                                    prestate = 'up'
-                                else:
-                                    throttle = 1780
-                                    prestate = 'up'
-                            elif(top1 == 'down'):
-                                if(throttle > 1650):
-                                    throttle = throttle - 5
-                                    prestate = 'down'
-                                else:
-                                    throttle = 1650
-                                    prestate = 'down'
+                            # elif(top1 == 'up'):
+                            #     if(throttle < 1780):
+                            #         throttle = throttle + 5
+                            #         prestate = 'up'
+                            #     else:
+                            #         throttle = 1780
+                            #         prestate = 'up'
+                            # elif(top1 == 'down'):
+                            #     if(throttle > 1650):
+                            #         throttle = throttle - 5
+                            #         prestate = 'down'
+                            #     else:
+                            #         throttle = 1650
+                            #         prestate = 'down'
                             elif(top1 == 'left'):
-                                if(prestate == 'right'):
-                                    pitch = 1600+pitch_offset
-                                    prestate = 'left'
-                                else:
-                                    rotate = 1350+rotate_offset
-                                    prestate = 'left'
+                                rotate = 1350+rotate_offset
                             elif(top1 == 'right'):
-                                if(prestate == 'left'):
-                                    pitch = 1600+pitch_offset
-                                    prestate = 'right'
-                                else:
-                                    rotate = 1650+rotate_offset
-                                    prestate = 'right'
+                                rotate = 1650+rotate_offset
                             
                             #Top2 controll
                             if(top2 == 'front'):
-                                pitch = pitch+pitch_offset
+                                pitch = pitch
                                 prestate2 = 'front'
-                                '''if(prestate2 == 'front2'):
-                                    pitch = 1550+pitch_offset
-                                    prestate2 = 'front3'
-                                elif(prestate2 == 'front3'):
-                                    pitch = 1500+pitch_offset
-                                    prestate2 == 'front' 
-                                else:
-                                    pitch = 1550+pitch_offset
-                                    prestate2 = 'front2'''
+                                # if(prestate2 == 'front2'):
+                                #     pitch = 1550+pitch_offset
+                                #     prestate2 = 'front3'
+                                # elif(prestate2 == 'front3'):
+                                #     pitch = 1500+pitch_offset
+                                #     prestate2 == 'front' 
+                                # else:
+                                #     pitch = 1550+pitch_offset
+                                #     prestate2 = 'front2'
                             elif(top2 == 'stop'):
                                 if(prestate2 == 'stop2'):
-                                    pitch = 1475+pitch_offset
+                                    pitch = 1500 + pitch_offset
                                     prestate2 = 'stop3'
                                 elif(prestate2 == 'stop3'):
-                                    pitch = 1500+pitch_offset
+                                    pitch = 1500 + pitch_offset
                                     prestate2 = 'stop'
                                 else:
-                                    pitch = 1475+pitch_offset
+                                    pitch = 1500 + pitch_offset
                                     prestate2 = 'stop2'
-                            elif(top2 == 'up'):
-                                if(throttle < 1800):
-                                    throttle = throttle + 2
-                                    prestate2 = 'up'
-                                else:
-                                    throttle = 1800
-                                    prestate2 = 'up'
-                            elif(top2 == 'down'):
-                                if(throttle > 1600):
-                                    throttle = throttle - 2
-                                    prestate2 = 'down'
-                                else:
-                                    throttle = 1600
-                                    prestate2 = 'down'
+                            # elif(top2 == 'up'):
+                            #     if(throttle < 1800):
+                            #         throttle = throttle + 2
+                            #         prestate2 = 'up'
+                            #     else:
+                            #         throttle = 1800
+                            #         prestate2 = 'up'
+                            # elif(top2 == 'down'):
+                            #     if(throttle > 1600):
+                            #         throttle = throttle - 2
+                            #         prestate2 = 'down'
+                            #     else:
+                            #         throttle = 1600
+                            #         prestate2 = 'down'
                             elif(top2 == 'left'):
-                                if(prestate2 == 'right'):
-                                    pitch = 1550+pitch_offset
-                                    prestate2 = 'left'
-                                else:
-                                    rotate = 1450+rotate_offset
-                                    prestate2 = 'left'
+                                rotate = rotate - 50
                             elif(top2 == 'right'):
-                                if(prestate2 == 'left'):
-                                    pitch = 1550+pitch_offset
-                                    prestate2 = 'right'
-                                else:
-                                    rotate = 1550+rotate_offset
-                                    prestate2 = 'right'
+                                rotate = rotate + 50
 
 
                         else:
                             pitch=int(controller.a_joystick_right_y*((-1)*sensitivity)+1500+pitch_offset)
                             rotate=int(controller.a_trigger*((-1)*sensitivity)+1500+rotate_offset)
-                            if abs(controller.a_joystick_left_y)>=0.1 and throttle>=1000 and throttle<=2000:
-                                throttle=throttle+int(controller.a_joystick_left_y*(-10))
-                            elif throttle>2000:
-                                throttle=2000
-                            elif throttle<1000:
-                                throttle=1000
+                            
+                        if abs(controller.a_joystick_left_y)>=0.1 and throttle>=1000 and throttle<=2000:
+                            throttle=throttle+int(controller.a_joystick_left_y*(-10))
+                        elif throttle>2000:
+                            throttle=2000
+                        elif throttle<1000:
+                            throttle=1000
                         roll=int(controller.a_joystick_right_x*sensitivity+1500+roll_offset)
 
 
@@ -592,12 +592,28 @@ if __name__ == "__main__":
             file_name=datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             
             with open('control_signal_log/'+file_name+'.csv', 'w', newline='') as csvfile:
-                fieldnames=['time','roll','pitch','rotate','throttle','down','front','left','right','stop','up','top1','top2']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    
-                writer.writeheader()
-                for item in control_signal_log:
-                    writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'down':predicted_probability_log[item][0],'front':predicted_probability_log[item][1],'left':predicted_probability_log[item][2],'right':predicted_probability_log[item][3],'stop':predicted_probability_log[item][4],'up':predicted_probability_log[item][5],'top1':top_label_log[item][0],'top2':top_label_log[item][1]})
+                if class_number==6:
+                    fieldnames=['time','roll','pitch','rotate','throttle','down','front','left','right','stop','up','top1','top2']
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+                    writer.writeheader()
+                    for item in control_signal_log:
+                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'down':predicted_probability_log[item][0],'front':predicted_probability_log[item][1],'left':predicted_probability_log[item][2],'right':predicted_probability_log[item][3],'stop':predicted_probability_log[item][4],'up':predicted_probability_log[item][5],'top1':top_label_log[item][0],'top2':top_label_log[item][1]})
+                elif class_number==4:
+                    fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','stop','top1','top2']
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+                    writer.writeheader()
+                    for item in control_signal_log:
+                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'front':predicted_probability_log[item][0],'left':predicted_probability_log[item][1],'right':predicted_probability_log[item][2],'stop':predicted_probability_log[item][3],'top1':top_label_log[item][0],'top2':top_label_log[item][1]})
+                
+                elif class_number==3:
+                    fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','top1','top2']
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+                    writer.writeheader()
+                    for item in control_signal_log:
+                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'front':predicted_probability_log[item][0],'left':predicted_probability_log[item][1],'right':predicted_probability_log[item][2],'top1':top_label_log[item][0],'top2':top_label_log[item][1]})
         
         
 # Close the window and quit.
