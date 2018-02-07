@@ -616,6 +616,7 @@ if __name__ == "__main__":
 
             file_name=datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             
+            #writing flying log to a csv file
             with open('control_signal_log/'+file_name+'.csv', 'w', newline='') as csvfile:
                 if class_number==6:
                     fieldnames=['time','roll','pitch','rotate','throttle','down','front','left','right','stop','up','top1','top2','flying state']
