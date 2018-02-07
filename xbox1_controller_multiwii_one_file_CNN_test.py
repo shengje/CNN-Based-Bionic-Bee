@@ -20,13 +20,13 @@ import msvcrt
 # dimensions of our images.
 img_width, img_height = 250, 140
 
-class_number=6
+class_number=4
 if class_number == 6:
     class_dict={0:'down',1:'front',2:'left',3:'right',4:'stop',5:'up'}
     weight_file_name='drone_control_6class_drone_capture_image_5C1F_V2.h5'
 elif class_number == 4:
     class_dict={0:'front',1:'left',2:'right',3:'stop'}
-    weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class.h5'
+    weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2.h5'
 elif class_number == 3:
     class_dict={0:'front',1:'left',2:'right'}
     weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_3class.h5'
@@ -278,11 +278,13 @@ if __name__ == "__main__":
         auto_pilot=False
         
         control_signal_log={}
-        captured_image_log={}
+        #captured_image_log={}
         predicted_probability_log={}
         top_label_log={}
         log_timer_start=time.time()
-        
+        flying_state_log={}
+
+        flying_state='prepare' #the mode of flying condition 'prepare' , 'auto_pilot' ,' interrupt'
         prestate='None'
         prestate2 = 'None'
         frontcontrol = 1
@@ -412,7 +414,7 @@ if __name__ == "__main__":
                             roll=1500+roll_offset
                             rotate=1500+rotate_offset
                             if(frontcontrol == 1):
-                                pitch = 1560+pitch_offset
+                                pitch = 1530+pitch_offset
                                 frontcontrol = -frontcontrol
 
                             if(top1 == 'front'):
@@ -498,10 +500,14 @@ if __name__ == "__main__":
                             elif(top2 == 'right'):
                                 rotate = rotate + 50
 
+                            flying_state='auto_pilot'
+
 
                         else:
                             pitch=int(controller.a_joystick_right_y*((-1)*sensitivity)+1500+pitch_offset)
                             rotate=int(controller.a_trigger*((-1)*sensitivity)+1500+rotate_offset)
+
+                            flying_state='interrupt'
                             
                         if abs(controller.a_joystick_left_y)>=0.1 and throttle>=1000 and throttle<=2000:
                             throttle=throttle+int(controller.a_joystick_left_y*(-10))
@@ -522,6 +528,8 @@ if __name__ == "__main__":
                             throttle=2000
                         elif throttle<1000:
                             throttle=1000
+
+                        flying_state='prepare'
                     
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -564,9 +572,10 @@ if __name__ == "__main__":
                 #recording flight control signal
                 if throttle!=1000:
                     control_signal_log["%.2f" % loop_time]=data
-                    captured_image_log["%.2f" % loop_time]=image
+                    #captured_image_log["%.2f" % loop_time]=image
                     predicted_probability_log["%.2f" % loop_time]=prediction
-                    top_label_log["%.2f" % loop_time]=[top1,top2]        
+                    top_label_log["%.2f" % loop_time]=[top1,top2]
+                    flying_state_log["%.2f" % loop_time]=flying_state        
                 # Limit to 20 frames per second
                 clock.tick(20)
                 
@@ -588,38 +597,51 @@ if __name__ == "__main__":
         time.sleep(1)
         butterfly.disarm()
         
-        if len(control_signal_log)>0 and len(captured_image_log)>0 and len(predicted_probability_log)>0:
+
+    
+        if len(control_signal_log)>0 and len(predicted_probability_log)>0 and len(top_label_log)>0 and len(flying_state_log)>0:
+
+            #calculate auto pilot accuracy by the percentage of not inerrupted auto pilot loops during flight
+            auto_pilot_counter=0
+            interrupt_counter=0
+            for item in flying_state_log:
+                if flying_state_log[item]=='auto_pilot':
+                    auto_pilot_counter=auto_pilot_counter+1
+                elif flying_state_log[item]=='interrupt':
+                    interrupt_counter=interrupt_counter+1
+
+            auto_pilot_accuracy=auto_pilot_counter/(auto_pilot_counter+interrupt_counter)
+            
+            print('Auto Pilot Accuracy: %0.3f' % auto_pilot_accuracy)
+
             file_name=datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             
             with open('control_signal_log/'+file_name+'.csv', 'w', newline='') as csvfile:
                 if class_number==6:
-                    fieldnames=['time','roll','pitch','rotate','throttle','down','front','left','right','stop','up','top1','top2']
+                    fieldnames=['time','roll','pitch','rotate','throttle','down','front','left','right','stop','up','top1','top2','flying state']
                     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
                     writer.writeheader()
                     for item in control_signal_log:
-                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'down':predicted_probability_log[item][0],'front':predicted_probability_log[item][1],'left':predicted_probability_log[item][2],'right':predicted_probability_log[item][3],'stop':predicted_probability_log[item][4],'up':predicted_probability_log[item][5],'top1':top_label_log[item][0],'top2':top_label_log[item][1]})
+                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'down':predicted_probability_log[item][0],'front':predicted_probability_log[item][1],'left':predicted_probability_log[item][2],'right':predicted_probability_log[item][3],'stop':predicted_probability_log[item][4],'up':predicted_probability_log[item][5],'top1':top_label_log[item][0],'top2':top_label_log[item][1],'flying state':flying_state_log[item]})
                 elif class_number==4:
-                    fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','stop','top1','top2']
+                    fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','stop','top1','top2','flying state']
                     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
                     writer.writeheader()
                     for item in control_signal_log:
-                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'front':predicted_probability_log[item][0],'left':predicted_probability_log[item][1],'right':predicted_probability_log[item][2],'stop':predicted_probability_log[item][3],'top1':top_label_log[item][0],'top2':top_label_log[item][1]})
+                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'front':predicted_probability_log[item][0],'left':predicted_probability_log[item][1],'right':predicted_probability_log[item][2],'stop':predicted_probability_log[item][3],'top1':top_label_log[item][0],'top2':top_label_log[item][1],'flying state':flying_state_log[item]})
                 
                 elif class_number==3:
-                    fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','top1','top2']
+                    fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','top1','top2','flying state']
                     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
                     writer.writeheader()
                     for item in control_signal_log:
-                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'front':predicted_probability_log[item][0],'left':predicted_probability_log[item][1],'right':predicted_probability_log[item][2],'top1':top_label_log[item][0],'top2':top_label_log[item][1]})
+                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'front':predicted_probability_log[item][0],'left':predicted_probability_log[item][1],'right':predicted_probability_log[item][2],'top1':top_label_log[item][0],'top2':top_label_log[item][1],'flying state':flying_state_log[item]})
         
         
 # Close the window and quit.
 # If you forget this line, the program will 'hang'
 # on exit if running from IDLE.
 pygame.quit ()
-
-
-
