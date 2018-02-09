@@ -320,12 +320,7 @@ if __name__ == "__main__":
                 # above this, or they will be erased with this command.
                 screen.fill(WHITE)
                 textPrint.reset()
-                
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = np.rot90(frame)
-                frame = pygame.surfarray.make_surface(frame)
-                screen.blit(frame, (600,100))
-                
+                                
                 loop_time=time.time()-log_timer_start             
                 runtime = time.time()
                 
@@ -335,6 +330,11 @@ if __name__ == "__main__":
                 x = image.img_to_array(img)
                 x=x/255
                 x = np.expand_dims(x, axis=0)
+                
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame = np.rot90(frame)
+                frame = pygame.surfarray.make_surface(frame)
+                screen.blit(frame, (600,100))
                 
                 images = np.vstack([x])
                 prediction = model.predict(images, batch_size=1)
