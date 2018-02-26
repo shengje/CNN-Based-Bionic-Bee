@@ -125,7 +125,7 @@ model.fit_generator(
     validation_steps=nb_validation_samples/batch_size)
     
 
-model.save_weights('drone_control_drone_capture_image_5C1F_EE_2F_4class_v2.h5')
+model.save_weights('drone_control_drone_capture_image_3C1F_EE_2F_4class_v2.h5')
     
 #building confusion matrix
 import numpy as np
