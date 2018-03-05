@@ -427,7 +427,7 @@ if __name__ == "__main__":
                                 frontcontrol = -frontcontrol
 
                             if(top1 == 'front'):
-                                pitch = 1600+pitch_offset
+                                pitch = 1550+pitch_offset
                                 prestate = 'front'
                                 # if(prestate == 'front2'):
                                 #     pitch = 1600+pitch_offset
@@ -586,7 +586,7 @@ if __name__ == "__main__":
                     top_label_log["%.2f" % loop_time]=[top1,top2]
                     flying_state_log["%.2f" % loop_time]=flying_state        
                 # Limit to 20 frames per second
-                clock.tick(20)
+                clock.tick(10)
                 
         except Exception as error:
             print ("Error on Main: "+str(error))

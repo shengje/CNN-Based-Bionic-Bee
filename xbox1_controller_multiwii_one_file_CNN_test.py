@@ -32,9 +32,9 @@ elif class_number == 5:
     weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_5class_v2_flower.h5'
 elif class_number == 4:
     class_dict={0:'front',1:'left',2:'right',3:'stop'}
-    if version == 1:
+    if version = 1:
         weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2.h5'
-    elif version == 2:
+    elif version = 2:
         weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2_small_resolution.h5'
 elif class_number == 3:
     class_dict={0:'front',1:'left',2:'right'}
