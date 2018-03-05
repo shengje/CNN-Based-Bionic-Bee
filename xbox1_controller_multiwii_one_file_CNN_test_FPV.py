@@ -18,15 +18,19 @@ import numpy as np
 import msvcrt
 
 # dimensions of our images.
-img_width, img_height = 250, 140
+img_width, img_height = 140, 140
 
 class_number=4
+version = 2
 if class_number == 6:
     class_dict={0:'down',1:'front',2:'left',3:'right',4:'stop',5:'up'}
     weight_file_name='drone_control_6class_drone_capture_image_5C1F_V2.h5'
 elif class_number == 4:
     class_dict={0:'front',1:'left',2:'right',3:'stop'}
-    weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2.h5'
+    if version ==1 :
+        weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2.h5'
+    elif version == 2:
+        weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2_small_resolution.h5'
 elif class_number == 3:
     class_dict={0:'front',1:'left',2:'right'}
     weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_3class.h5'
@@ -324,7 +328,7 @@ if __name__ == "__main__":
                 loop_time=time.time()-log_timer_start             
                 runtime = time.time()
                 
-                img = cv2.resize(frame, (140,250), interpolation = cv2.INTER_CUBIC)
+                img = cv2.resize(frame, (140,140), interpolation = cv2.INTER_CUBIC)
                 #img = np.swapaxes(frame, 0, 1)
                 #img = np.fliplr(img)
                 x = image.img_to_array(img)
