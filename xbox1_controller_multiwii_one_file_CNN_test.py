@@ -19,14 +19,23 @@ import msvcrt
 
 # dimensions of our images.
 img_width, img_height = 250, 140
+#K.set_floatx('float16')
+#K.set_epsilon(1e-04)
 
 class_number=4
+version = 2
 if class_number == 6:
     class_dict={0:'down',1:'front',2:'left',3:'right',4:'stop',5:'up'}
     weight_file_name='drone_control_6class_drone_capture_image_5C1F_V2.h5'
+elif class_number == 5:
+    class_dict={0:'flower',1:'front',2:'left',3:'right',4:'stop'}
+    weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_5class_v2_flower.h5'
 elif class_number == 4:
     class_dict={0:'front',1:'left',2:'right',3:'stop'}
-    weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2.h5'
+    if version = 1:
+        weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2.h5'
+    elif version = 2:
+        weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2_small_resolution.h5'
 elif class_number == 3:
     class_dict={0:'front',1:'left',2:'right'}
     weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_3class.h5'
@@ -288,6 +297,8 @@ if __name__ == "__main__":
         prestate='None'
         prestate2 = 'None'
         frontcontrol = 1
+        flower_count = 0
+        normalization_constant=np.float16(255)
         
         cap = cv2.VideoCapture(camera_num)
         
@@ -324,7 +335,7 @@ if __name__ == "__main__":
                 loop_time=time.time()-log_timer_start             
                 runtime = time.time()
                 
-                img = cv2.resize(frame, (140,250), interpolation = cv2.INTER_CUBIC)
+                img = cv2.resize(frame, (140,140), interpolation = cv2.INTER_CUBIC)
                 #img = np.swapaxes(frame, 0, 1)
                 #img = np.fliplr(img)
                 x = image.img_to_array(img)
@@ -383,7 +394,7 @@ if __name__ == "__main__":
                         auto_land=True
                         throttle = throttle - 5
                     else:
-                        time.sleep(1)
+                        #time.sleep(1)
                         auto_land=False
                     console_messege="Auto Land"
                     console_messege_timer_start =  time.time()
@@ -414,11 +425,11 @@ if __name__ == "__main__":
                             roll=1500+roll_offset
                             rotate=1500+rotate_offset
                             if(frontcontrol == 1):
-                                pitch = 1530+pitch_offset
+                                pitch = 1520+pitch_offset
                                 frontcontrol = -frontcontrol
 
                             if(top1 == 'front'):
-                                pitch = 1600+pitch_offset
+                                pitch = 1550+pitch_offset
                                 prestate = 'front'
                                 # if(prestate == 'front2'):
                                 #     pitch = 1600+pitch_offset
@@ -457,6 +468,11 @@ if __name__ == "__main__":
                                 rotate = 1350+rotate_offset
                             elif(top1 == 'right'):
                                 rotate = 1650+rotate_offset
+                            elif(top1 == 'flower'):
+                                if flower_count == 5:
+                                    auto_land = True
+                                else:
+                                    flower_count = flower_count + 1
                             
                             #Top2 controll
                             if(top2 == 'front'):
@@ -499,6 +515,11 @@ if __name__ == "__main__":
                                 rotate = rotate - 50
                             elif(top2 == 'right'):
                                 rotate = rotate + 50
+                            elif(top2 == 'flower'):
+                                if flower_count == 5:
+                                    auto_land = True
+                                else:
+                                    flower_count = flower_count + 1
 
                             flying_state='auto_pilot'
 
@@ -575,7 +596,7 @@ if __name__ == "__main__":
                     #captured_image_log["%.2f" % loop_time]=image
                     predicted_probability_log["%.2f" % loop_time]=prediction
                     top_label_log["%.2f" % loop_time]=[top1,top2]
-                    flying_state_log["%.2f" % loop_time]=flying_state        
+                    flying_state_log["%.2f" % loop_time]=flying_state
                 # Limit to 20 frames per second
                 clock.tick(20)
                 
@@ -610,13 +631,14 @@ if __name__ == "__main__":
                 elif flying_state_log[item]=='interrupt':
                     interrupt_counter=interrupt_counter+1
 
-            auto_pilot_accuracy=auto_pilot_counter/(auto_pilot_counter+interrupt_counter)
-            
+            if auto_pilot_counter!=0 and interrupt_counter!=0:
+                auto_pilot_accuracy=auto_pilot_counter/(auto_pilot_counter+interrupt_counter)
+            else:
+                auto_pilot_accuracy = 0
             print('Auto Pilot Accuracy: %0.3f' % auto_pilot_accuracy)
 
             file_name=datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             
-            #writing flying log to a csv file
             with open('control_signal_log/'+file_name+'.csv', 'w', newline='') as csvfile:
                 if class_number==6:
                     fieldnames=['time','roll','pitch','rotate','throttle','down','front','left','right','stop','up','top1','top2','flying state']
@@ -625,6 +647,15 @@ if __name__ == "__main__":
                     writer.writeheader()
                     for item in control_signal_log:
                         writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'down':predicted_probability_log[item][0],'front':predicted_probability_log[item][1],'left':predicted_probability_log[item][2],'right':predicted_probability_log[item][3],'stop':predicted_probability_log[item][4],'up':predicted_probability_log[item][5],'top1':top_label_log[item][0],'top2':top_label_log[item][1],'flying state':flying_state_log[item]})
+
+                elif class_number==5:
+                    fieldnames=['time','roll','pitch','rotate','throttle','flower','front','left','right','stop','top1','top2','flying state']
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+                    writer.writeheader()
+                    for item in control_signal_log:
+                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'flower':predicted_probability_log[item][0],'front':predicted_probability_log[item][1],'left':predicted_probability_log[item][2],'right':predicted_probability_log[item][3],'stop':predicted_probability_log[item][4],'top1':top_label_log[item][0],'top2':top_label_log[item][1],'flying state':flying_state_log[item]})
+                
                 elif class_number==4:
                     fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','stop','top1','top2','flying state']
                     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
