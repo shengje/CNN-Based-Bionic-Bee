@@ -336,7 +336,7 @@ if __name__ == "__main__":
                 x = np.expand_dims(x, axis=0)
                 
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = np.rot90(frame)
+                frame = np.swapaxes(frame,0,1)
                 frame = pygame.surfarray.make_surface(frame)
                 screen.blit(frame, (600,100))
                 
