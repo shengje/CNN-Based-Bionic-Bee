@@ -24,25 +24,19 @@ from keras.preprocessing import image
 import numpy as np
 import msvcrt
 
+
+##########################################################################################################
+#variables 
+class_number=4
+class_dict={0:'front',1:'left',2:'right',3:'stop'}
+navigation_weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2_small_resolution.h5'
+flower_weight_file_name='is_flower_5C1F_V4.h5'
+flower_prob_threshold=0.4
+auto_takeoff_throttle=1700
+##########################################################################################################
+
 # dimensions of our images.
 img_width, img_height = 140, 140
-
-class_number=4
-version = 2
-if class_number == 6:
-    class_dict={0:'down',1:'front',2:'left',3:'right',4:'stop',5:'up'}
-    navigation_weight_file_name='drone_control_6class_drone_capture_image_5C1F_V2.h5'
-elif class_number == 4:
-    class_dict={0:'front',1:'left',2:'right',3:'stop'}
-    if version ==1 :
-        navigation_weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2.h5'
-    elif version == 2:
-        navigation_weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2_small_resolution.h5'
-elif class_number == 3:
-    class_dict={0:'front',1:'left',2:'right'}
-    navigation_weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_3class.h5'
-
-flower_weight_file_name='is_flower_5C1F_V4.h5'
 
 if K.image_data_format() == 'channels_first':
     input_shape = (3, img_width, img_height)
@@ -208,7 +202,9 @@ class xbox1:
 		return button_analog
 
 #build models
-model=buildmodel(4,navigation_weight_file_name)
+model1=buildmodel(4,navigation_weight_file_name)
+
+model2=buildmodel(1,flower_weight_file_name)
 
 pygame.init()
  
@@ -259,7 +255,7 @@ if __name__ == "__main__":
             textPrint.print(screen, "Ready to Fly {}".format(" ") )
             textPrint.print(screen, "press X button to start {}".format(" ") )
             textPrint.print(screen, "press Share button to quit {}".format(" ") )
-            textPrint.print(screen, "Camera Number : {}".format(camera_num))
+            textPrint.print(screen, "Camera Number(Press A to change) : {}".format(camera_num))
 
             controller.update()
 
@@ -270,7 +266,7 @@ if __name__ == "__main__":
                 idle=False
                 #Loop until the user clicks the close button.
                 done = False
-            elif controller.B:
+            elif controller.A:
                 camera_num = camera_num * (-1) + 1 
 
             pygame.display.flip()
@@ -292,6 +288,7 @@ if __name__ == "__main__":
         console_messege_timer_start=0
         auto_land=False
         auto_pilot=False
+        flower_detected=False
         
         control_signal_log={}
         #captured_image_log={}
@@ -299,11 +296,13 @@ if __name__ == "__main__":
         top_label_log={}
         log_timer_start=time.time()
         flying_state_log={}
+        flower_probability_log={}
 
         flying_state='prepare' #the mode of flying condition 'prepare' , 'auto_pilot' ,' interrupt'
         prestate='None'
         prestate2 = 'None'
-        frontcontrol = 1
+        frontcontrol = True
+        flower_prob_counter=0
         
         cap = cv2.VideoCapture(camera_num)
         
@@ -316,19 +315,6 @@ if __name__ == "__main__":
                 for event in pygame.event.get(): # User did something
                     if event.type == pygame.QUIT: # If user clicked close
                         done=True # Flag that we are done so we exit this loop
-                    '''if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_w:
-                            pitch_offset = pitch_offset + 5
-                        elif event.key == pygame.K_s:
-                            pitch_offset = pitch_offset -5
-                        elif event.key == pygame.K_a:
-                            roll_offset = roll_offset - 5
-                        elif event.key == pygame.K_d:
-                            roll_offset = roll_offset + 5
-                        elif event.key == pygame.K_q:
-                            rotate_offset = rotate_offset - 5
-                        elif event.key == pygame.K_e:
-                            rotate_offset = rotate_offset + 5'''
 
                 idle=False
                 # DRAWING STEP
@@ -353,8 +339,14 @@ if __name__ == "__main__":
                 screen.blit(frame, (600,100))
                 
                 images = np.vstack([x])
-                prediction = model.predict(images, batch_size=1)
-                prediction = prediction[0]    
+                prediction = model1.predict(images, batch_size=1)
+                prediction = prediction[0]
+
+                flower_prob = model2.predict(images, batch_size=1)
+                flower_prob = flower_prob[0]
+
+                if time.time() - console_messege_timer_start > 2:
+                    console_messege=" "
                 
                 first=0
                 two = 0
@@ -366,53 +358,58 @@ if __name__ == "__main__":
                         two = prediction[i]
                         top2 = class_dict[i]
                 
+                if flower_prob>flower_prob_threshold:
+                    flower_prob_counter=flower_prob_counter+1
+                    if flower_prob_counter>5:
+                        auto_land=True
+                        console_messege="Flower Detected!!!"
+                        flower_prob_counter=0
+
+                else:
+                    flower_prob_counter=0
+
                 controller.update()
                 
-                if time.time() - console_messege_timer_start > 2:
-                    console_messege=" "
-                    
-                
-                    
-                if controller.B:
+                #button function    
+                if controller.B:#arm
                     butterfly.arm()
                     console_messege="Armed."
                     console_messege_timer_start =  time.time()
-                elif controller.A:
+                elif controller.A:#disarm
                     butterfly.disarm()
                     console_messege="Disarmed."
                     console_messege_timer_start =  time.time()
-                elif controller.Y:
+                elif controller.Y:#stop flying
                     done=True        	
-                #example of 4 RC channels to be send
-                elif controller.X:
+                elif controller.X:#default control signal
                     pitch=1500
                     roll=1500
                     rotate=1500
                     throttle=1000 
-                elif controller.rb:
+                elif controller.rb:#increase sensitivity
                     if sensitivity<500:
                         sensitivity=sensitivity+50
-                elif controller.lb:
+                elif controller.lb:#decrease sensitivity
                     if sensitivity>100:
                         sensitivity=sensitivity-50
-                elif controller.up:
-                    throttle=1700
+                elif controller.up:#directly set throttle to 1700
+                    throttle=auto_takeoff_throttle
                     console_messege="Auto Take Off"
                     console_messege_timer_start =  time.time()
-                elif controller.down or auto_land==True:
+                elif controller.down or auto_land==True:#auto land
                     if throttle>1400:
                         auto_land=True
-                        throttle = throttle - 5
+                        throttle = throttle - 3
                     else:
-                        time.sleep(1)
                         auto_land=False
                     console_messege="Auto Land"
                     console_messege_timer_start =  time.time()
-                elif controller.right:
+                elif controller.right:#activate CNN auto pilot
                     auto_pilot=True
-                elif controller.left:
+                elif controller.left:#back to manual control
                     auto_pilot=False
 
+                #control offset adjustment
                 elif(msvcrt.kbhit()):
                     key = msvcrt.getch()
                     if(key.decode() == 'w'):
@@ -427,16 +424,18 @@ if __name__ == "__main__":
                         rotate_offset = rotate_offset - 5
                     elif(key.decode() == 'e'):
                         rotate_offset = rotate_offset + 5
-                else:
-                    if auto_pilot:
+                
+                else:#flying control
+                    if auto_pilot:#auto piloting
                         if abs(controller.a_joystick_right_x)<0.1 and abs(controller.a_joystick_right_y)<0.1 and abs(controller.a_trigger)<0.1:
+                            #not being interrupt
                             #auto_pilot controll method
                             pitch=1500+pitch_offset
                             roll=1500+roll_offset
                             rotate=1500+rotate_offset
                             if(frontcontrol == 1):
                                 pitch = 1530+pitch_offset
-                                frontcontrol = -frontcontrol
+                                frontcontrol = not frontcontrol
 
                             if(top1 == 'front'):
                                 pitch = 1550+pitch_offset
@@ -524,7 +523,7 @@ if __name__ == "__main__":
                             flying_state='auto_pilot'
 
 
-                        else:
+                        else:#interrupt auto pilot
                             pitch=int(controller.a_joystick_right_y*((-1)*sensitivity)+1500+pitch_offset)
                             rotate=int(controller.a_trigger*((-1)*sensitivity)+1500+rotate_offset)
 
@@ -539,7 +538,7 @@ if __name__ == "__main__":
                         roll=int(controller.a_joystick_right_x*sensitivity+1500+roll_offset)
 
 
-                    else:
+                    else:#manual control
                         roll=int(controller.a_joystick_right_x*sensitivity+1500+roll_offset)
                         pitch=int(controller.a_joystick_right_y*((-1)*sensitivity)+1500+pitch_offset)
                         rotate=int(controller.a_trigger*((-1)*sensitivity)+1500+rotate_offset)
@@ -582,6 +581,10 @@ if __name__ == "__main__":
                 textPrint.print(screen, "Top1: %s , Top2: %s" %(top1,top2) )
 
                 textPrint.print(screen, " {}".format(" ") )
+
+                textPrint.print(screen, "Flower Probability: %s" %(flower_prob) )
+
+                textPrint.print(screen, " {}".format(" ") )
                 
                 textPrint.print(screen, "Runtime: {}".format(time.time()-runtime) )
         
@@ -596,7 +599,8 @@ if __name__ == "__main__":
                     #captured_image_log["%.2f" % loop_time]=image
                     predicted_probability_log["%.2f" % loop_time]=prediction
                     top_label_log["%.2f" % loop_time]=[top1,top2]
-                    flying_state_log["%.2f" % loop_time]=flying_state        
+                    flying_state_log["%.2f" % loop_time]=flying_state
+                    flower_probability_log["%.2f" % loop_time]=flower_prob
                 # Limit to 20 frames per second
                 clock.tick(10)
                 
@@ -639,29 +643,12 @@ if __name__ == "__main__":
             
             #writing flying log to a csv file
             with open('control_signal_log/'+file_name+'.csv', 'w', newline='') as csvfile:
-                if class_number==6:
-                    fieldnames=['time','roll','pitch','rotate','throttle','down','front','left','right','stop','up','top1','top2','flying state']
-                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
-                    writer.writeheader()
-                    for item in control_signal_log:
-                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'down':predicted_probability_log[item][0],'front':predicted_probability_log[item][1],'left':predicted_probability_log[item][2],'right':predicted_probability_log[item][3],'stop':predicted_probability_log[item][4],'up':predicted_probability_log[item][5],'top1':top_label_log[item][0],'top2':top_label_log[item][1],'flying state':flying_state_log[item]})
-                elif class_number==4:
-                    fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','stop','top1','top2','flying state']
-                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
-                    writer.writeheader()
-                    for item in control_signal_log:
-                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'front':predicted_probability_log[item][0],'left':predicted_probability_log[item][1],'right':predicted_probability_log[item][2],'stop':predicted_probability_log[item][3],'top1':top_label_log[item][0],'top2':top_label_log[item][1],'flying state':flying_state_log[item]})
-                
-                elif class_number==3:
-                    fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','top1','top2','flying state']
-                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
-                    writer.writeheader()
-                    for item in control_signal_log:
-                        writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'front':predicted_probability_log[item][0],'left':predicted_probability_log[item][1],'right':predicted_probability_log[item][2],'top1':top_label_log[item][0],'top2':top_label_log[item][1],'flying state':flying_state_log[item]})
-        
+                fieldnames=['time','roll','pitch','rotate','throttle','front','left','right','stop','flower','top1','top2','flying state']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    
+                writer.writeheader()
+                for item in control_signal_log:
+                    writer.writerow({'time':item,'pitch':control_signal_log[item][0],'roll':control_signal_log[item][1],'rotate':control_signal_log[item][2],'throttle':control_signal_log[item][3],'front':predicted_probability_log[item][0],'left':predicted_probability_log[item][1],'right':predicted_probability_log[item][2],'stop':predicted_probability_log[item][3],'flower':flower_probability_log[item],'top1':top_label_log[item][0],'top2':top_label_log[item][1],'flying state':flying_state_log[item]})
         
 # Close the window and quit.
 # If you forget this line, the program will 'hang'
