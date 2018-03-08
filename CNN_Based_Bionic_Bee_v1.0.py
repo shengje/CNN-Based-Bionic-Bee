@@ -31,7 +31,7 @@ class_number=4
 class_dict={0:'front',1:'left',2:'right',3:'stop'}
 navigation_weight_file_name='drone_control_drone_capture_image_5C1F_EE_2F_4class_v2_small_resolution.h5'
 flower_weight_file_name='is_flower_5C1F_V4.h5'
-flower_prob_threshold=0.4
+flower_prob_threshold=0.75
 auto_takeoff_throttle=1700
 ##########################################################################################################
 
@@ -253,8 +253,11 @@ if __name__ == "__main__":
             screen.fill(WHITE)
             textPrint.reset()
             textPrint.print(screen, "Ready to Fly {}".format(" ") )
+            textPrint.print(screen, " {}".format(" ") )
             textPrint.print(screen, "press X button to start {}".format(" ") )
+            textPrint.print(screen, " {}".format(" ") )
             textPrint.print(screen, "press Share button to quit {}".format(" ") )
+            textPrint.print(screen, " {}".format(" ") )
             textPrint.print(screen, "Camera Number(Press A to change) : {}".format(camera_num))
 
             controller.update()
@@ -358,7 +361,7 @@ if __name__ == "__main__":
                         two = prediction[i]
                         top2 = class_dict[i]
                 
-                if flower_prob>flower_prob_threshold:
+                if flower_prob[0]>flower_prob_threshold and flying_state=="auto_pilot":
                     flower_prob_counter=flower_prob_counter+1
                     if flower_prob_counter>5:
                         auto_land=True
@@ -397,12 +400,13 @@ if __name__ == "__main__":
                     console_messege="Auto Take Off"
                     console_messege_timer_start =  time.time()
                 elif controller.down or auto_land==True:#auto land
-                    if throttle>1400:
+                    if throttle>1400 and (abs(controller.a_joystick_right_x)<0.1 and abs(controller.a_joystick_right_y)<0.1 and abs(controller.a_trigger)<0.1):
                         auto_land=True
                         throttle = throttle - 3
                     else:
                         auto_land=False
-                    console_messege="Auto Land"
+                    if console_messege!="Flower Detected!!!":
+                        console_messege="Auto Land"
                     console_messege_timer_start =  time.time()
                 elif controller.right:#activate CNN auto pilot
                     auto_pilot=True
@@ -434,11 +438,11 @@ if __name__ == "__main__":
                             roll=1500+roll_offset
                             rotate=1500+rotate_offset
                             if(frontcontrol == 1):
-                                pitch = 1530+pitch_offset
+                                pitch = 1520+pitch_offset
                                 frontcontrol = not frontcontrol
 
                             if(top1 == 'front'):
-                                pitch = 1550+pitch_offset
+                                pitch = 1530+pitch_offset
                                 prestate = 'front'
                                 # if(prestate == 'front2'):
                                 #     pitch = 1600+pitch_offset
@@ -459,20 +463,6 @@ if __name__ == "__main__":
                                 else:
                                     pitch = 1500+pitch_offset
                                     prestate = 'stop2'
-                            # elif(top1 == 'up'):
-                            #     if(throttle < 1780):
-                            #         throttle = throttle + 5
-                            #         prestate = 'up'
-                            #     else:
-                            #         throttle = 1780
-                            #         prestate = 'up'
-                            # elif(top1 == 'down'):
-                            #     if(throttle > 1650):
-                            #         throttle = throttle - 5
-                            #         prestate = 'down'
-                            #     else:
-                            #         throttle = 1650
-                            #         prestate = 'down'
                             elif(top1 == 'left'):
                                 rotate = 1350+rotate_offset
                             elif(top1 == 'right'):
@@ -501,20 +491,6 @@ if __name__ == "__main__":
                                 else:
                                     pitch = 1500 + pitch_offset
                                     prestate2 = 'stop2'
-                            # elif(top2 == 'up'):
-                            #     if(throttle < 1800):
-                            #         throttle = throttle + 2
-                            #         prestate2 = 'up'
-                            #     else:
-                            #         throttle = 1800
-                            #         prestate2 = 'up'
-                            # elif(top2 == 'down'):
-                            #     if(throttle > 1600):
-                            #         throttle = throttle - 2
-                            #         prestate2 = 'down'
-                            #     else:
-                            #         throttle = 1600
-                            #         prestate2 = 'down'
                             elif(top2 == 'left'):
                                 rotate = rotate - 50
                             elif(top2 == 'right'):
@@ -582,7 +558,7 @@ if __name__ == "__main__":
 
                 textPrint.print(screen, " {}".format(" ") )
 
-                textPrint.print(screen, "Flower Probability: %s" %(flower_prob) )
+                textPrint.print(screen, "Flower Probability: %s" %(flower_prob[0]) )
 
                 textPrint.print(screen, " {}".format(" ") )
                 
