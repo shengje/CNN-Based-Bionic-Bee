@@ -333,8 +333,8 @@ if __name__ == "__main__":
                 #img = np.swapaxes(frame, 0, 1)
                 #img = np.fliplr(img)
                 x = image.img_to_array(img)
-                x=x/255
-                x = np.expand_dims(x, axis=0)
+		x = np.expand_dims(x, axis=0)
+                x = preprocess_input(x)
                 
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frame = np.swapaxes(frame,0,1)
