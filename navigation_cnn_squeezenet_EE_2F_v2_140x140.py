@@ -60,7 +60,7 @@ validation_generator = test_datagen.flow_from_directory(
     batch_size=batch_size,
     class_mode='categorical')
 
-model.fit_generator(
+train_history=model.fit_generator(
     train_generator,
     steps_per_epoch=nb_train_samples/batch_size,
     epochs=epochs,
@@ -70,6 +70,20 @@ model.fit_generator(
 
 model.save_weights('navigation_cnn_squeezenet_EE_2F_4class_v2_140x140.h5')
     
+#view gradient descent    
+import matplotlib.pyplot as plt
+def show_train_history(train_history,train,validation):
+	plt.plot(train_history.history[train])
+	plt.plot(train_history.history[validation])
+	plt.title('Train History')
+	plt.ylabel(train)
+	plt.xlabel('Epoch')
+	plt.legend(['train', 'validation'], loc='upper left')
+	plt.show()
+						
+show_train_history(train_history,'acc','val_acc')
+show_train_history(train_history,'loss','val_loss')
+
 #building confusion matrix
 import numpy as np
 
