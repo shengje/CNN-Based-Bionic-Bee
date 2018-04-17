@@ -62,7 +62,7 @@ if K.image_data_format() == 'channels_first':
 else:
     input_shape = (img_width, img_height, 3)
 
-model=SqueezeNet(load_weight=False,weights=None,input_shape=input_shape,classes=class_number)
+model=SqueezeNet(weights=None,input_shape=input_shape,classes=class_number)
 
 top2_acc = functools.partial(metrics.top_k_categorical_accuracy, k=2)
 top2_acc.__name__ = 'top2_acc'
