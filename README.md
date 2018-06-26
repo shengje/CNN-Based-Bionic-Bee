@@ -20,5 +20,7 @@ Following link is a video example.
 
 https://drive.google.com/a/g.ncu.edu.tw/file/d/1s4xx9KmXxhEMji93oRxBfrH0Nh-MzdZs/view?usp=sharing
 
+We're now able to let the drone fly in the long hallway automaticly. And the precision is around 90% (less than 10% of the time need human intervention).
+
 Next step we try to add the flower recognition system on the drone.
-O
+Our solution will be YOLO object detection with Tiny Darknet structure.
