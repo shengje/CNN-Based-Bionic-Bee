@@ -15,7 +15,9 @@ Further more we want to make this drone can find flowers and recognize its speci
 
 ## Now Progress
 Now we can make the drone fly automatically by about 10 meters long in the hallway.
+
 Following link is a video example.
 https://drive.google.com/a/g.ncu.edu.tw/file/d/1s4xx9KmXxhEMji93oRxBfrH0Nh-MzdZs/view?usp=sharing
 
 Next step we try to add the flower recognition system on the drone.
+O
